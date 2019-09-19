@@ -1,7 +1,5 @@
 package com.jtl.aidl_client;
 
-import androidx.appcompat.app.AppCompatActivity;
-
 import android.content.ComponentName;
 import android.content.Intent;
 import android.content.ServiceConnection;
@@ -15,20 +13,11 @@ import android.widget.Toast;
 
 import com.jtl.aidl_service.IMyAidlInterface;
 
+import androidx.appcompat.app.AppCompatActivity;
+
 public class MainActivity extends AppCompatActivity implements View.OnClickListener {
     private Button mAidlBindBtn;
-    private Button mAidlUnBindBtn;
-//    private IMyAidlInterface mIMyAidlInterface=new IMyAidlInterface.Stub() {
-//        @Override
-//        public void printLog(final String msg) throws RemoteException {
-//            runOnUiThread(new Runnable() {
-//                @Override
-//                public void run() {
-//                    Toast.makeText(MainActivity.this,msg+":"+ Process.myPid(),Toast.LENGTH_SHORT).show();
-//                }
-//            });
-//        }
-//    };
+    private Button mAidlTestBtn;
 
     private IMyAidlInterface mIMyAidlInterface=null;
     private ServiceConnection mServiceConnection=new ServiceConnection() {
@@ -48,9 +37,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         setContentView(R.layout.activity_main);
 
         mAidlBindBtn=findViewById(R.id.btn_aidl_bind);
-        mAidlUnBindBtn=findViewById(R.id.btn_aidl_unbind);
+        mAidlTestBtn =findViewById(R.id.btn_aidl_test);
 
-        addOnClickListener(mAidlBindBtn,mAidlUnBindBtn);
+        addOnClickListener(mAidlBindBtn, mAidlTestBtn);
     }
 
     private void addOnClickListener(View ... views) {
@@ -64,7 +53,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         switch (v.getId()){
             case R.id.btn_aidl_bind:
                 Intent intent =new Intent();
-//                intent.setClassName("com.jtl.aidl_service",com.jtl.aidl_service.IMyAidlInterface.class.getName());
                 intent.setPackage("com.jtl.aidl_service");
                 intent.setAction("com.jtl.aidl_service");
 
@@ -72,7 +60,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
                 Toast.makeText(MainActivity.this,isSuccess?"bind success":"bind failed",Toast.LENGTH_SHORT).show();
                 break;
-            case R.id.btn_aidl_unbind:
+            case R.id.btn_aidl_test:
                 try {
                     if (mIMyAidlInterface!=null){
                         mIMyAidlInterface.printLog("测试:"+ Process.myPid());
