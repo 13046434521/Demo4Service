@@ -1,2 +1,2 @@
-include ':demo'
+include ':demo', ':aidl_service', ':aidl_client'
 rootProject.name='Demo4Service'
