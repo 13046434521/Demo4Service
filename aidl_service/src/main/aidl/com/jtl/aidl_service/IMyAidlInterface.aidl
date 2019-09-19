@@ -5,4 +5,9 @@ package com.jtl.aidl_service;
 
 interface IMyAidlInterface {
     void printLog(String msg);
+
+    void openCamera(String cameraId);
+
+    void closeCamera();
+
 }
