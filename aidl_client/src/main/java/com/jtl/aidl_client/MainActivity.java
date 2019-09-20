@@ -11,16 +11,23 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.Toast;
 
+import com.jtl.aidl_client.camera.CameraGLSurface;
 import com.jtl.aidl_service.IMyAidlInterface;
+import com.socks.library.KLog;
 
-import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 
 public class MainActivity extends AppCompatActivity implements View.OnClickListener {
+    private static final String TAG = MainActivity.class.getSimpleName();
     private Button mAidlBindBtn;
     private Button mAidlTestBtn;
     private Button mOpenCameraBtn;
     private Button mCloseCameraBtn;
+
+    private Thread mCameraThread;
+    private CameraGLSurface mCameraGLSurface;
+    private int width = Constant.WIDTH;
+    private int height = Constant.HEIGHT;
 
     private IMyAidlInterface mIMyAidlInterface = null;
     private ServiceConnection mServiceConnection = new ServiceConnection() {
@@ -34,19 +41,47 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
         }
     };
-    private String mCameraId = "0";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-
+        mCameraGLSurface=findViewById(R.id.gl_aidl_preview);
         mAidlBindBtn = findViewById(R.id.btn_aidl_bind);
         mAidlTestBtn = findViewById(R.id.btn_aidl_test);
         mOpenCameraBtn = findViewById(R.id.btn_aidl_open);
         mCloseCameraBtn = findViewById(R.id.btn_aidl_close);
 
         addOnClickListener(mAidlBindBtn, mAidlTestBtn, mOpenCameraBtn, mCloseCameraBtn);
+
+        startCameraDataThread();
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+
+        if (mCameraGLSurface != null) {
+            mCameraGLSurface.onResume();
+            mCameraGLSurface.setAspectRatio(height, width);
+        }
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        if (mCameraGLSurface != null) {
+            mCameraGLSurface.onPause();
+        }
+
+        try {
+            if (mIMyAidlInterface != null) {
+                mIMyAidlInterface.closeCamera();
+            }
+        } catch (RemoteException e) {
+            e.printStackTrace();
+        }
+
     }
 
     private void addOnClickListener(View... views) {
@@ -90,8 +125,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private void openCamera() {
         try {
             if (mIMyAidlInterface != null) {
-                mCameraId = mCameraId == "0" ? "1" : "0";
-                mIMyAidlInterface.openCamera(mCameraId);
+                mIMyAidlInterface.openCamera("0");
             } else {
                 Toast.makeText(MainActivity.this, "mIMyAidlInterface==null  " + Process.myPid(), Toast.LENGTH_SHORT).show();
             }
@@ -100,7 +134,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         }
     }
 
-    private void closeCamera(){
+    private void closeCamera() {
         try {
             if (mIMyAidlInterface != null) {
                 mIMyAidlInterface.closeCamera();
@@ -112,15 +146,36 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         }
     }
 
+    private void startCameraDataThread() {
+        mCameraThread = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                KLog.w(TAG, "startCameraDataThread");
+                while (true) {
+                    try {
+                        if (mIMyAidlInterface == null || mIMyAidlInterface.getCameraData() == null) {
+                            KLog.w(TAG, "mIMyAidlInterface==null||mIMyAidlInterface.getCameraData()==null");
+                            continue;
+                        }
+                        KLog.w(TAG, "setCameraData");
+                        mCameraGLSurface.setCameraData(Constant.CAMERA_BACK,mIMyAidlInterface.getCameraData());
+                    } catch (RemoteException e) {
+                        KLog.e(TAG, e.getMessage());
+                        e.printStackTrace();
+                    }
+
+                }
+            }
+        }, "CameraDataThread");
+
+        mCameraThread.start();
+    }
+
     @Override
     protected void onDestroy() {
         super.onDestroy();
         if (mServiceConnection != null) {
             unbindService(mServiceConnection);
         }
-    }
-
-    @Override
-    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
     }
 }

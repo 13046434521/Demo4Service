@@ -1,4 +1,4 @@
-package com.jtl.aidl_service;
+package com.jtl.aidl_client;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;

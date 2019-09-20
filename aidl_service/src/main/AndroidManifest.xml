@@ -20,7 +20,8 @@
         </activity>
         <service android:name=".AIDLService"
             android:enabled="true"
-            android:exported="true">
+            android:exported="true"
+            android:process=":remote">
             <intent-filter >
                 <action android:name="com.jtl.aidl_service"/>
                 <category android:name="android.intent.category.DEFAULT"/>
