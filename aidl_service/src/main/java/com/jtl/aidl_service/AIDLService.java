@@ -4,12 +4,14 @@ import android.Manifest;
 import android.app.Service;
 import android.content.Intent;
 import android.os.IBinder;
+import android.os.RemoteCallbackList;
 import android.os.RemoteException;
 
 import com.socks.library.KLog;
 
 import androidx.annotation.Nullable;
 import androidx.annotation.RequiresPermission;
+import androidx.core.util.Pools;
 
 import static com.jtl.aidl_service.Constant.HEIGHT;
 import static com.jtl.aidl_service.Constant.WIDTH;
@@ -24,6 +26,10 @@ public class AIDLService extends Service implements CameraWrapper.CameraDataList
     private static final String TAG = AIDLService.class.getSimpleName();
     private CameraWrapper mCameraWrapper;
     private volatile byte[] mData;
+    private Pools.SynchronizedPool<CameraData> mDataSynchronizedPool = new Pools.SynchronizedPool<>(5);
+    private Thread mCameraServiceThread;
+
+    private RemoteCallbackList<CameraCallBack> mCallbackList = new RemoteCallbackList<>();
 
     private IMyAidlInterface.Default.Stub mAidlInterface = new IMyAidlInterface.Stub() {
         @Override
@@ -33,21 +39,48 @@ public class AIDLService extends Service implements CameraWrapper.CameraDataList
 
         @Override
         public byte[] getCameraData() throws RemoteException {
-            KLog.w(TAG,"回调---------AIDL------");
+            KLog.w(TAG, "回调---------AIDL------");
             return mData;
         }
 
         @Override
         @RequiresPermission(Manifest.permission.CAMERA)
         public void openCamera(String cameraId) throws RemoteException {
-            KLog.w(TAG,"打开相机");
+            KLog.w(TAG, "打开相机");
             mCameraWrapper.openCamera(cameraId);
         }
 
         @Override
         public void closeCamera() throws RemoteException {
-            KLog.w(TAG,"关闭相机");
+            KLog.w(TAG, "关闭相机");
             mCameraWrapper.closeCamera();
+        }
+
+        @Override
+        public void startPreview() throws RemoteException {
+            if (mCameraServiceThread == null) {
+                mCameraServiceThread = new Thread(new Runnable() {
+                    @Override
+                    public void run() {
+                        while (true) {
+//                            CameraData cameraData=mDataSynchronizedPool.acquire();
+//                            cameraData.
+                            callBackData(mCameraWrapper.getImageData());
+                        }
+                    }
+                });
+            }
+            mCameraServiceThread.start();
+        }
+
+        @Override
+        public void register(CameraCallBack callBack) throws RemoteException {
+            mCallbackList.register(callBack);
+        }
+
+        @Override
+        public void unregister(CameraCallBack callBack) throws RemoteException {
+            mCallbackList.unregister(callBack);
         }
     };
 
@@ -92,7 +125,23 @@ public class AIDLService extends Service implements CameraWrapper.CameraDataList
 
     @Override
     public void setCameraDataListener(String mCameraId, byte[] imageData, float timestamp, int imageFormat) {
-        KLog.w(TAG,"回调---------CameraWrapper------");
-        mData=imageData.clone();
+        KLog.w(TAG, "回调---------CameraWrapper------");
+        mData = imageData.clone();
+    }
+
+    private void callBackData(byte[] cameraData) {
+        try {
+            //获取回调个数
+            int N = mCallbackList.beginBroadcast();
+
+            for (int i = 0; i < N; i++) {
+                //把所有回调都进行相关操作
+                mCallbackList.getBroadcastItem(i).callBack(cameraData);
+            }
+            //finish
+            mCallbackList.finishBroadcast();
+        } catch (RemoteException e) {
+            e.printStackTrace();
+        }
     }
 }

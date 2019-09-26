@@ -12,6 +12,7 @@ import android.widget.Button;
 import android.widget.Toast;
 
 import com.jtl.aidl_client.camera.CameraGLSurface;
+import com.jtl.aidl_service.CameraCallBack;
 import com.jtl.aidl_service.IMyAidlInterface;
 import com.socks.library.KLog;
 
@@ -42,6 +43,15 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         }
     };
 
+    CameraCallBack.Stub mCameraCallBack=new CameraCallBack.Stub() {
+        @Override
+        public void callBack(byte[] data) throws RemoteException {
+            if (mCameraGLSurface!=null){
+                mCameraGLSurface.setCameraData(Constant.CAMERA_BACK,data);
+            }
+        }
+    };
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -54,7 +64,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
         addOnClickListener(mAidlBindBtn, mAidlTestBtn, mOpenCameraBtn, mCloseCameraBtn);
 
-        startCameraDataThread();
+//        startCameraDataThread();
     }
 
     @Override
@@ -105,6 +115,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             case R.id.btn_aidl_test:
                 try {
                     if (mIMyAidlInterface != null) {
+                        mIMyAidlInterface.startPreview();
+                        mIMyAidlInterface.register(mCameraCallBack);
                         mIMyAidlInterface.printLog("测试:" + Process.myPid());
                     } else {
                         Toast.makeText(MainActivity.this, "mIMyAidlInterface==null  " + Process.myPid(), Toast.LENGTH_SHORT).show();

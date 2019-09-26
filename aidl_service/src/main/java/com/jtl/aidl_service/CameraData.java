@@ -28,7 +28,7 @@ public class CameraData implements Parcelable {
 
     protected CameraData(Parcel in) {
         this.mCameraId = in.readString();
-
+        this.imageData = in.marshall();
         this.timestamp = in.readInt();
         this.imageFormat = in.readInt();
     }
